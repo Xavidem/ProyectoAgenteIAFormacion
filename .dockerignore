@@ -1,0 +1,13 @@
+# Ignore everything...
+**
+
+# Except these essentials:
+!Containerfile
+!src/**
+!models/llava/ggml-model-q4_k.gguf
+!requirements.txt
+!README.md
+!models/all-MiniLM-L6-v2/**
+!metadata_master.json
+!Containerfile.api
+!Containerfile.indexer

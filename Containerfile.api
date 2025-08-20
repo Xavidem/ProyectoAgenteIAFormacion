@@ -1,0 +1,19 @@
+FROM python:3.10-slim
+
+# Dependencias del sistema
+RUN apt-get update && apt-get install -y --no-install-recommends libgomp1 && rm -rf /var/lib/apt/lists/*
+
+# Librerias de Python
+RUN pip install --no-cache-dir fastapi uvicorn qdrant-client sentence-transformers requests 
+
+WORKDIR /app
+
+# Copiamos todo lo necesario
+COPY src/service/chat_api.py /app/chat_api.py
+COPY metadata_master.json /app/metadata_master.json
+
+# Exponemos el puerto
+EXPOSE 8000
+
+# Comandos para ejecutar la app
+CMD ["uvicorn", "chat_api:app", "--host", "0.0.0.0", "--port", "8000"]

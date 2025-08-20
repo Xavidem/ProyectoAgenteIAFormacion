@@ -1,0 +1,65 @@
+version: '3.8'
+services:
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: qdrant
+    ports:
+      - "6333:6333"
+    volumes:
+      - qdrant_data:/qdrant/storage
+  
+  indexer:
+    build:
+      context: .
+      dockerfile: Containerfile.indexer
+    image: indexer:latest
+    container_name: indexer
+    depends_on:
+      - qdrant
+    environment:
+      QDRANT_HOST: qdrant
+      QDRANT_PORT: 6333
+    restart: "no"
+  
+  llava-service:
+    build:
+      context: .
+      dockerfile: Containerfile
+    image: llava-service:latest
+    container_name: llava-service
+    ports:
+      - "8001:8001"
+    depends_on:
+      - indexer
+    environment:
+      LLAVA_N_THREADS: "4"
+      LLAVA_CTX: "2048"
+      LLAVA_BATCH: "128"
+    volumes:
+      - ./models/llava:/app/models:ro
+
+  chat-api:
+    build:
+      context: .
+      dockerfile: Containerfile.api
+    image: chat-api:latest
+    container_name: chat-api
+    ports:
+      - "8000:8000"
+    depends_on:
+      - llava-service
+    environment:
+      QDRANT_HOST: qdrant
+      QDRANT_PORT: 6333
+      METADATA_PATH: /app/metadata_master.json
+      LLAVA_INFER_URL: http://llava-service:8001/infer
+      LLAVA_CONNEC_TIMEOUT: "5"
+      LLAVA_READ_TIMEOUT: "180"
+      PROMPT_CHAR_BUDGET: "1200"
+      MAX_DOCS: "3"
+      SEARCH_MULTIPLIER: "6"
+    volumes:
+      - ./models/all-MiniLM-L6-v2:/app/models/all-MiniLM-L6-v2
+      
+volumes:
+  qdrant_data:
