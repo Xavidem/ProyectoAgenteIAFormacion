@@ -1,61 +1,29 @@
-# --- Python ---
+# Modelos pesados
+models/
+
+# Estado de autenticación de SharePoint
+.sp_storage_state.json
+secrets/
+*.sp_storage_state.json
+
+# Metadatos generados
+metadata_master_*.json
+
+# Cosas de Python
 __pycache__/
 *.py[cod]
 *.pyo
-*.so
-*.egg-info/
-.dist/
-build/
-dist/
-.venv/
-venv/
-.env
-.env.*
-
-# --- Jupyter ---
-.ipynb_checkpoints/
-
-# --- IDE/OS ---
-.vscode/
-.idea/
-.DS_Store
-Thumbs.db
-
-# --- Logs ---
-logs/
+*.pyd
 *.log
 
-# --- Docker/Podman (genérico) ---
-*.pid
-# Si usas volúmenes locales:
-volumes/
-qdrant_data/
+# Entornos virtuales
+.venv/
+venv/
 
-# --- Proyecto (lo que me pediste NO subir) ---
-# Modelos pesados (tu modelo concreto y cualquier .gguf)
-models/llava/ggml-model-q4_k.gguf
-models/llava/ggml-modeol-q4_k.gguf
-models/**/*.gguf
-models/all-MiniLM-L6-v2
-# Mantén documentación o placeholders en models/
-!models/README.md
-!models/.gitkeep
+# Cosas de editor/IDE
+.vscode/
+.idea/
+*.code-workspace
 
-# Metadatos locales (no versionar el master real)
-metadata_master.json
-# Puedes subir una plantilla en su lugar:
-# !metadata_master.sample.json
-
-# Payloads locales de pruebas
-payload.json
-payload_8001.json
-
-# Carpeta de datos completa
-data/
-!data/.gitkeep
-
-# Certificados locales
-certs.d/
-*.pem
-*.crt
-*.key
+# Otros
+*.zip

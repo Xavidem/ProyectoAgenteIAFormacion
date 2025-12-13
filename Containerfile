@@ -11,7 +11,6 @@ WORKDIR /app
 
 # Copiamos nuestro servicio y el modelo
 COPY src/service/llm_service.py /app/llm_service.py
-COPY models/llava/ggml-model-q4_k.gguf /app/models/ggml-model-q4_k.gguf
 
 # Hacemos EXPOSE del puerto
 EXPOSE 8001

@@ -3,7 +3,6 @@ from pydantic import BaseModel, Field
 from llama_cpp import Llama
 import os
 
-# Ruta del modelo
 MODEL_PATH = os.getenv("LLAVA_MODEL_PATH", "/app/models/ggml-model-q4_k.gguf")
 
 # Llamamos a FastAPI
@@ -18,14 +17,19 @@ try:
     llm = Llama(
         model_path=MODEL_PATH,
         n_threads=int(os.getenv("LLAVA_N_THREADS", "4")),
-        n_ctx = int(os.getenv("LLAVA_N_CTX", "2048")),
-        n_batch = int(os.getenv("LLAVA_N_BATCH", "128"))
+        n_ctx = int(os.getenv("LLAVA_N_CTX", "1024")),
+        n_batch = int(os.getenv("LLAVA_N_BATCH", "64")),
+        use_mmap=True,
+        use_mlock=False
     )
 except Exception as e:
     raise RuntimeError("Error al cargar Llava desde {MODEL_PATH}: {e}")
 
 
-# Escribimos los Pydantic models
+
+# ========================================
+# INICIO: PYDANTIC MODELS
+# ========================================
 class InferRequest(BaseModel):
     prompt: str = Field(..., description="Texto de entrada para que el modelo genere una respuesta.")
     max_tokens: int = Field(256, description="Numero maximo de tokens a generar en la respuesta.")
@@ -37,20 +41,16 @@ class InferResponse(BaseModel):
 class HealthResponse(BaseModel):
     status: str = Field(..., description="Estado del servicio.")
 
-
-# Endpoint para la salud del servicio
-"""
-Comprueba que el servicio esta funcionando correctamente
-"""
+# ========================================
+# FIN: PYDANTIC MODELS
+# ========================================
+"""DESCRIPCION PRINCIPAL DE LA FUNCION: Comprobacon de que el servicio esta activo """
 @app.get("/health", response_model=HealthResponse)
 def health_check():
     return HealthResponse(status="ok")
 
 
-# Endpoint para inferencia
-"""
-Generar una respuesta a partir de un texto dado un prompt de usuario. Usamos llama.cpp para ejecutar LLaVA
-"""
+"""DESCRIPCION PRINCIPAL DE LA FUNCION: Inferencia de texto usando LLaVA """
 @app.post("/infer", response_model=InferResponse)
 def infer(request: InferRequest):
     try:

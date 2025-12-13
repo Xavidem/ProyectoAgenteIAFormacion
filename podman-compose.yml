@@ -17,8 +17,28 @@ services:
     depends_on:
       - qdrant
     environment:
-      QDRANT_HOST: qdrant
-      QDRANT_PORT: 6333
+      SP_SITE_HOST: "everisgroup.sharepoint.com"
+      SP_SITE_PATH: "/sites/FormacionesCertificaciones"
+      SP_DOC_ROOT: "Documentos compartidos/Documentacion General/DOCUMENTACIÓN"
+      SP_BROWSER_CHANNEL: ""
+      SP_STORAGE_STATE: "/secrets/.sp_storage_state.json"
+      USE_LOCAL_MODE: "1"
+      SP_DISABLE_LOGIN: "1"
+      QDRANT_HOST: "qdrant"
+      QDRANT_PORT: "6333"
+      QDRANT_COLLECTION_NAME: "docs"
+      METADATA_PATH: "/app/metadata_master_1.json"
+      WAIT_SECONDS: "7"
+      EMBEDDING_MODEL_PATH: "/app/models/all-MiniLM-L6-v2"
+      EMBEDDINGS_URL: "http://llava-service:8001/embeddings"
+      EMBEDDING_DIM: "384"
+      EMBEDDING_MODEL: "/app/models/all-MiniLM-L6-v2"
+      SP_WATCH_INTERVAL: "60"
+    volumes:
+      - ./metadata_master_1.json:/app/metadata_master_1.json:rw 
+      - ./models:/app/models:ro
+      - ./.sp_storage_state.json:/secrets/.sp_storage_state.json:ro
+      - ./models/all-MiniLM-L6-v2:/app/models/all-MiniLM-L6-v2
     restart: "no"
   
   llava-service:
@@ -30,13 +50,15 @@ services:
     ports:
       - "8001:8001"
     depends_on:
-      - indexer
+      - qdrant
     environment:
       LLAVA_N_THREADS: "4"
-      LLAVA_CTX: "2048"
-      LLAVA_BATCH: "128"
+      LLAVA_N_CTX: "768"
+      LLAVA_N_BATCH: "32"
+      LLAVA_MODEL_PATH: "/app/models/ggml-model-q4_k.gguf"
     volumes:
       - ./models/llava:/app/models:ro
+      - ./models/all-MiniLM-L6-v2:/app/models/all-MiniLM-L6-v2
 
   chat-api:
     build:
@@ -51,15 +73,38 @@ services:
     environment:
       QDRANT_HOST: qdrant
       QDRANT_PORT: 6333
-      METADATA_PATH: /app/metadata_master.json
-      LLAVA_INFER_URL: http://llava-service:8001/infer
-      LLAVA_CONNEC_TIMEOUT: "5"
-      LLAVA_READ_TIMEOUT: "180"
+      METADATA_PATH: "/app/metadata_master_1.json"
+      LLAVA_INFER_URL: "http://llava-service:8001/infer"
+      LLAVA_READ_TIMEOUT: "50"
+      LLAVA_RETRIES: "1"
       PROMPT_CHAR_BUDGET: "1200"
       MAX_DOCS: "3"
       SEARCH_MULTIPLIER: "6"
+      MEMORY_DB_PATH: "/app/memory.sqlite"
+      MEMORY_TTL_DAYS: "5"
+      MEMORY_MAX_TURNS: "8"
+      MEMORY_SUMMARY_TARGET_CHARS: "1200" 
+      OFFICIAL_LINKS_PATH: "/app/official_urls.json"
+      SHAREPOINT_BASE: "https://everisgroup.sharepoint.com/sites/FormacionesCertificaciones/Documentos%20compartidos/Documentacion%20General/DOCUMENTACI%C3%93N"
+      SHAREPOINT_TOPIC_MAP: '{"Appium":"APPIUM","Gherkin":"GHERKIN","Java":"JAVA","Postman":"POSTMAN","Hoppscotch":"HOPPSCOTCH","Selenium":"SELENIUM","Accesibilidad":"ACCESIBILIDAD"}'
+      SHAREPOINT_UNDERSCORE_AS_SPACE: "1"
+      SHAREPOINT_OPEN_WEB: "1"
     volumes:
       - ./models/all-MiniLM-L6-v2:/app/models/all-MiniLM-L6-v2
+      - ./metadata_master_1.json:/app/metadata_master_1.json:rw
+      - ./official_urls.json:/app/official_urls.json:rw
+  
+  ui:
+    build:
+      context: .
+      dockerfile: Containerfile.ui
+    ports:
+      - "7860:7860"
+    depends_on:
+      - chat-api
+    environment:
+      BACKEND_URL: "http://chat-api:8000/chat"
+    restart: unless-stopped
       
 volumes:
   qdrant_data:

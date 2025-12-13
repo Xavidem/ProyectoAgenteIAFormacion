@@ -35,3 +35,7 @@ curl.exe -X POST http://localhost:8001/infer -H "Content-Type: application/json"
 podman build -t llava-service -f Containerfile . 
 podman rm -f llava-service
 podman run -d --name llava-service -p 8001:8001 llava-service:latest
+
+# IMPORTANTE
+A la hora de meter los ficheros en local, deben tener el mismo nombre que el fichero en sharepoint,
+para que así lo pueda detectar la construcción de la url.

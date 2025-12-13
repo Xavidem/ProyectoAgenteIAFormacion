@@ -9,5 +9,9 @@
 !README.md
 !models/all-MiniLM-L6-v2/**
 !metadata_master.json
+!metadata_master_1.json
 !Containerfile.api
 !Containerfile.indexer
+!official_urls.json
+!payload.json
+!payload_8001.json

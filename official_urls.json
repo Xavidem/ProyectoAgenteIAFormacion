@@ -1,0 +1,39 @@
+{
+    "topics": [
+     {
+        "name": "java",
+        "keywords": ["java", "jdk", "jvm"],
+        "urls": ["https://www.java.com/es/"]
+     },
+          {
+        "name": "cucumber",
+        "keywords": ["cucumber"],
+        "urls": ["https://cucumber.io/"]
+     },
+          {
+        "name": "selenium",
+        "keywords": ["selenium"],
+        "urls": ["https://www.selenium.dev/documentation/"]
+     },
+          {
+        "name": "appium",
+        "keywords": ["appium"],
+        "urls": ["https://appium.io/docs/en/2.0/intro/"]
+     },
+          {
+        "name": "postman",
+        "keywords": ["postman"],
+        "urls": ["https://www.postman.com/web"]
+     },
+          {
+        "name": "hoppscotch",
+        "keywords": ["hoppscotch"],
+        "urls": ["https://hoppscotch.io/"]
+     },
+          {
+        "name": "gherkin",
+        "keywords": ["gherkin"],
+        "urls": ["https://cucumber.io/docs/gherkin/"]
+     }
+    ]
+}

@@ -8,9 +8,13 @@ RUN pip install --no-cache-dir fastapi uvicorn qdrant-client sentence-transforme
 
 WORKDIR /app
 
+
 # Copiamos todo lo necesario
 COPY src/service/chat_api.py /app/chat_api.py
-COPY metadata_master.json /app/metadata_master.json
+COPY metadata_master_1.json /app/metadata_master_1.json
+COPY src/mem/store.py /app/mem/store.py
+COPY src/mem/__init__.py /app/mem/__init__.py
+COPY official_urls.json /app/official_urls.json
 
 # Exponemos el puerto
 EXPOSE 8000
