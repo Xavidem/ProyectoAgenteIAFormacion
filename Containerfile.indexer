@@ -1,17 +1,26 @@
 FROM python:3.10-slim
 
-RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl libgomp1 && rm -rf /var/lib/apt/lists/*
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 
-RUN pip install --no-cache-dir pymupdf sentence-transformers qdrant-client watchdog python-docx playwright
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates curl libgomp1 \
+ && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
+
+COPY requirements/requirements.indexer.txt /app/requirements.txt
+RUN pip install --no-cache-dir -r /app/requirements.txt
 
 COPY metadata_master_1.json /app/metadata_master_1.json
 COPY src/catalog/text_extractor.py /app/text_extractor.py
 COPY src/catalog/metadata_extractor.py /app/metadata_extractor.py
-COPY src/catalog/sharepoint_fetcher.py /app/sharepoint_fetcher.py
-COPY src/catalog/watch_and_index.py /app/watch_and_index.py
 
-ENV PYTHONPATH=/app/src WATCH_DIR=/app/data/raw/proyecto-chatbot-materiales METADATA_PATH=/app/metadata_master.json QDRANT_HOST=qdrant QDRANT_PORT=6333 QDRANT_COLLECTION_NAME=docs EMBEDDING_MODEL_PATH=/app/models/all-MiniLM-L6-v2
+ENV DATA_ROOT=/app/data/pdfs \
+    METADATA_PATH=/app/metadata_master_1.json \
+    QDRANT_HOST=qdrant \
+    QDRANT_PORT=6333 \
+    QDRANT_COLLECTION_NAME=docs \
+    EMBEDDING_MODEL_PATH=/app/models/all-MiniLM-L6-v2 \
+    EMBEDDING_MODEL=/app/models/all-MiniLM-L6-v2
 
-CMD ["python", "-u", "watch_and_index.py"]
+CMD ["python", "-u", "/app/metadata_extractor.py"]

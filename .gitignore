@@ -1,13 +1,31 @@
-# Modelos pesados
-models/
+# Modelos pesados (se versionan solo las carpetas vacías)
+models/*
+!models/all-MiniLM-L6-v2/
+!models/llava/
+models/all-MiniLM-L6-v2/*
+!models/all-MiniLM-L6-v2/.gitkeep
+models/llava/*
+!models/llava/.gitkeep
 
-# Estado de autenticación de SharePoint
-.sp_storage_state.json
-secrets/
-*.sp_storage_state.json
-
-# Metadatos generados
+# Metadatos generados en runtime (el indexador actualiza metadata_master_1.json)
 metadata_master_*.json
+!metadata_master_1.json
+!metadata_master_1.json.example
+
+# Datos del usuario (PDF/DOCX) - no se commiten al repo
+data/pdfs/**
+!data/pdfs/.gitkeep
+
+# Memoria SQLite (estado runtime)
+memory.sqlite
+*.sqlite
+*.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
+
+# Variables de entorno locales
+.env
+!.env.example
 
 # Cosas de Python
 __pycache__/
@@ -27,3 +45,4 @@ venv/
 
 # Otros
 *.zip
+oom

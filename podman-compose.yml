@@ -1,13 +1,22 @@
 version: '3.8'
 services:
   qdrant:
-    image: qdrant/qdrant:latest
+    image: docker.io/qdrant/qdrant:latest
     container_name: qdrant
     ports:
-      - "6333:6333"
+      - "${QDRANT_PORT:-6333}:6333"
     volumes:
       - qdrant_data:/qdrant/storage
-  
+    mem_limit: ${QDRANT_MEM_LIMIT:-1g}
+    cpus: ${QDRANT_CPUS:-1.0}
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'timeout 2 bash -c \"</dev/tcp/127.0.0.1/6333\"' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
+    restart: unless-stopped
+
   indexer:
     build:
       context: .
@@ -15,32 +24,40 @@ services:
     image: indexer:latest
     container_name: indexer
     depends_on:
-      - qdrant
+      qdrant:
+        condition: service_healthy
     environment:
-      SP_SITE_HOST: "everisgroup.sharepoint.com"
-      SP_SITE_PATH: "/sites/FormacionesCertificaciones"
-      SP_DOC_ROOT: "Documentos compartidos/Documentacion General/DOCUMENTACIÓN"
-      SP_BROWSER_CHANNEL: ""
-      SP_STORAGE_STATE: "/secrets/.sp_storage_state.json"
-      USE_LOCAL_MODE: "1"
-      SP_DISABLE_LOGIN: "1"
-      QDRANT_HOST: "qdrant"
-      QDRANT_PORT: "6333"
-      QDRANT_COLLECTION_NAME: "docs"
+      LOG_LEVEL: "${LOG_LEVEL:-INFO}"
+      QDRANT_HOST: "${QDRANT_HOST:-qdrant}"
+      QDRANT_PORT: "${QDRANT_PORT:-6333}"
+      QDRANT_COLLECTION_NAME: "${QDRANT_COLLECTION_NAME:-docs}"
       METADATA_PATH: "/app/metadata_master_1.json"
-      WAIT_SECONDS: "7"
-      EMBEDDING_MODEL_PATH: "/app/models/all-MiniLM-L6-v2"
-      EMBEDDINGS_URL: "http://llava-service:8001/embeddings"
-      EMBEDDING_DIM: "384"
-      EMBEDDING_MODEL: "/app/models/all-MiniLM-L6-v2"
-      SP_WATCH_INTERVAL: "60"
+      EMBEDDING_MODEL_PATH: "/app/models/${EMBEDDINGS_DIR:-all-MiniLM-L6-v2}"
+      EMBEDDING_MODEL: "/app/models/${EMBEDDINGS_DIR:-all-MiniLM-L6-v2}"
+      DATA_ROOT: "/app/data/pdfs"
+      CHUNK_SIZE: "${CHUNK_SIZE:-280}"
+      CHUNK_STRIDE: "${CHUNK_STRIDE:-200}"
+      STRUCTURAL_CHUNKING: "${STRUCTURAL_CHUNKING:-1}"
     volumes:
-      - ./metadata_master_1.json:/app/metadata_master_1.json:rw 
-      - ./models:/app/models:ro
-      - ./.sp_storage_state.json:/secrets/.sp_storage_state.json:ro
-      - ./models/all-MiniLM-L6-v2:/app/models/all-MiniLM-L6-v2
+      - ./metadata_master_1.json:/app/metadata_master_1.json:rw,Z
+      - ${MODELS_ROOT:-./models}:/app/models:ro,Z
+      - ${DATA_ROOT:-./data/pdfs}:/app/data/pdfs:ro,Z
+      - ${MODELS_ROOT:-./models}/${EMBEDDINGS_DIR:-all-MiniLM-L6-v2}:/app/models/${EMBEDDINGS_DIR:-all-MiniLM-L6-v2}:Z
+    mem_limit: ${INDEXER_MEM_LIMIT:-1g}
+    cpus: ${INDEXER_CPUS:-2.0}
     restart: "no"
-  
+    command: >
+      sh -lc '
+        echo "[indexer] generando metadata_master_1.json local desde ./data/pdfs";
+        python /app/metadata_extractor.py /app/metadata_master_1.json;
+
+        echo "[indexer] lanzando text_extractor.py (indexación en Qdrant)";
+        python /app/text_extractor.py;
+
+        echo "[indexer] indexación completada. Quedando en espera...";
+        tail -f /dev/null
+      '
+
   llava-service:
     build:
       context: .
@@ -50,15 +67,26 @@ services:
     ports:
       - "8001:8001"
     depends_on:
-      - qdrant
+      qdrant:
+        condition: service_healthy
     environment:
-      LLAVA_N_THREADS: "4"
-      LLAVA_N_CTX: "768"
-      LLAVA_N_BATCH: "32"
-      LLAVA_MODEL_PATH: "/app/models/ggml-model-q4_k.gguf"
+      LOG_LEVEL: "${LOG_LEVEL:-INFO}"
+      LLAVA_N_THREADS: "${LLAVA_N_THREADS:-4}"
+      LLAVA_N_CTX: "${LLAVA_N_CTX:-1024}"
+      LLAVA_N_BATCH: "${LLAVA_N_BATCH:-32}"
+      LLAVA_MODEL_PATH: "/app/models/${LLAVA_MODEL_FILE:-ggml-model-q4_k.gguf}"
     volumes:
-      - ./models/llava:/app/models:ro
-      - ./models/all-MiniLM-L6-v2:/app/models/all-MiniLM-L6-v2
+      - ${MODELS_ROOT:-./models}/${LLAVA_DIR:-llava}:/app/models:ro,Z
+      - ${MODELS_ROOT:-./models}/${EMBEDDINGS_DIR:-all-MiniLM-L6-v2}:/app/models/${EMBEDDINGS_DIR:-all-MiniLM-L6-v2}:Z
+    mem_limit: ${LLAVA_MEM_LIMIT:-4g}
+    cpus: ${LLAVA_CPUS:-2.0}
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sSf http://localhost:8001/health >/dev/null || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 8
+      start_period: 60s
+    restart: unless-stopped
 
   chat-api:
     build:
@@ -69,31 +97,50 @@ services:
     ports:
       - "8000:8000"
     depends_on:
-      - llava-service
+      qdrant:
+        condition: service_healthy
+      llava-service:
+        condition: service_healthy
     environment:
-      QDRANT_HOST: qdrant
-      QDRANT_PORT: 6333
+      LOG_LEVEL: "${LOG_LEVEL:-INFO}"
+      QDRANT_HOST: "${QDRANT_HOST:-qdrant}"
+      QDRANT_PORT: "${QDRANT_PORT:-6333}"
+      QDRANT_COLLECTION_NAME: "${QDRANT_COLLECTION_NAME:-docs}"
       METADATA_PATH: "/app/metadata_master_1.json"
+      EMBEDDING_MODEL_PATH: "/app/models/${EMBEDDINGS_DIR:-all-MiniLM-L6-v2}"
       LLAVA_INFER_URL: "http://llava-service:8001/infer"
-      LLAVA_READ_TIMEOUT: "50"
-      LLAVA_RETRIES: "1"
-      PROMPT_CHAR_BUDGET: "1200"
-      MAX_DOCS: "3"
-      SEARCH_MULTIPLIER: "6"
+      LLAVA_READ_TIMEOUT: "${LLAVA_READ_TIMEOUT:-50}"
+      LLAVA_RETRIES: "${LLAVA_RETRIES:-1}"
+      LLAVA_MAX_TOKENS_CHAT: "${LLAVA_MAX_TOKENS_CHAT:-320}"
+      LLAVA_MAX_TOKENS_SUMMARY: "${LLAVA_MAX_TOKENS_SUMMARY:-220}"
+      PROMPT_CHAR_BUDGET: "${PROMPT_CHAR_BUDGET:-1200}"
+      SEARCH_MULTIPLIER: "${SEARCH_MULTIPLIER:-6}"
+      MMR_LAMBDA: "${MMR_LAMBDA:-0.7}"
+      ALLOW_MULTI_CHUNK: "${ALLOW_MULTI_CHUNK:-true}"
+      MULTI_CHUNK_RATIO: "${MULTI_CHUNK_RATIO:-0.9}"
       MEMORY_DB_PATH: "/app/memory.sqlite"
-      MEMORY_TTL_DAYS: "5"
-      MEMORY_MAX_TURNS: "8"
-      MEMORY_SUMMARY_TARGET_CHARS: "1200" 
+      MEMORY_TTL_DAYS: "${MEMORY_TTL_DAYS:-5}"
+      MEMORY_MAX_TURNS: "${MEMORY_MAX_TURNS:-8}"
+      MEMORY_SUMMARY_TARGET_CHARS: "${MEMORY_SUMMARY_TARGET_CHARS:-1200}"
       OFFICIAL_LINKS_PATH: "/app/official_urls.json"
-      SHAREPOINT_BASE: "https://everisgroup.sharepoint.com/sites/FormacionesCertificaciones/Documentos%20compartidos/Documentacion%20General/DOCUMENTACI%C3%93N"
-      SHAREPOINT_TOPIC_MAP: '{"Appium":"APPIUM","Gherkin":"GHERKIN","Java":"JAVA","Postman":"POSTMAN","Hoppscotch":"HOPPSCOTCH","Selenium":"SELENIUM","Accesibilidad":"ACCESIBILIDAD"}'
-      SHAREPOINT_UNDERSCORE_AS_SPACE: "1"
-      SHAREPOINT_OPEN_WEB: "1"
+      DOCS_ROOT: "/app/data/pdfs"
+      CORS_ORIGINS: "${CORS_ORIGINS:-*}"
+      REINDEX_COMMAND: "${REINDEX_COMMAND:-}"
     volumes:
-      - ./models/all-MiniLM-L6-v2:/app/models/all-MiniLM-L6-v2
-      - ./metadata_master_1.json:/app/metadata_master_1.json:rw
-      - ./official_urls.json:/app/official_urls.json:rw
-  
+      - ${MODELS_ROOT:-./models}/${EMBEDDINGS_DIR:-all-MiniLM-L6-v2}:/app/models/${EMBEDDINGS_DIR:-all-MiniLM-L6-v2}:Z
+      - ./metadata_master_1.json:/app/metadata_master_1.json:ro,Z
+      - ./official_urls.json:/app/official_urls.json:ro,Z
+      - ${DATA_ROOT:-./data/pdfs}:/app/data/pdfs:ro,Z
+    mem_limit: ${CHAT_API_MEM_LIMIT:-1g}
+    cpus: ${CHAT_API_CPUS:-1.0}
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sSf http://localhost:8000/health >/dev/null || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 6
+      start_period: 30s
+    restart: unless-stopped
+
   ui:
     build:
       context: .
@@ -101,10 +148,23 @@ services:
     ports:
       - "7860:7860"
     depends_on:
-      - chat-api
+      chat-api:
+        condition: service_healthy
     environment:
-      BACKEND_URL: "http://chat-api:8000/chat"
+      LOG_LEVEL: "${LOG_LEVEL:-INFO}"
+      BACKEND_URL: "${BACKEND_URL:-http://chat-api:8000/chat}"
+      FILES_PUBLIC_BASE: "${FILES_PUBLIC_BASE:-http://localhost:8000}"
+      UI_DEFAULT_THRESHOLD: "${UI_DEFAULT_THRESHOLD:-0.4}"
+      UI_DEFAULT_K: "${UI_DEFAULT_K:-5}"
+    mem_limit: ${UI_MEM_LIMIT:-512m}
+    cpus: ${UI_CPUS:-0.5}
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sSf http://localhost:7860/ >/dev/null || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 4
+      start_period: 20s
     restart: unless-stopped
-      
+
 volumes:
   qdrant_data:

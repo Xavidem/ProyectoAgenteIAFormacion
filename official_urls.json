@@ -6,34 +6,34 @@
         "urls": ["https://www.java.com/es/"]
      },
           {
-        "name": "cucumber",
-        "keywords": ["cucumber"],
-        "urls": ["https://cucumber.io/"]
+        "name": "python",
+        "keywords": ["python", "Python"],
+        "urls": ["https://www.learnpython.org/es/"]
      },
           {
-        "name": "selenium",
-        "keywords": ["selenium"],
-        "urls": ["https://www.selenium.dev/documentation/"]
+        "name": "SQL",
+        "keywords": ["SQL", "sql"],
+        "urls": ["https://www.youtube.com/watch?v=OuJerKzV5T0"]
      },
           {
-        "name": "appium",
-        "keywords": ["appium"],
-        "urls": ["https://appium.io/docs/en/2.0/intro/"]
+        "name": "C++",
+        "keywords": ["C++", "c++"],
+        "urls": ["https://learn.microsoft.com/es-es/cpp/?view=msvc-170"]
      },
           {
-        "name": "postman",
-        "keywords": ["postman"],
-        "urls": ["https://www.postman.com/web"]
+        "name": "Podman",
+        "keywords": ["Podman", "podman"],
+        "urls": ["https://podman.io/"]
      },
-          {
-        "name": "hoppscotch",
-        "keywords": ["hoppscotch"],
-        "urls": ["https://hoppscotch.io/"]
+               {
+        "name": "Docker",
+        "keywords": ["Docker", "docker"],
+        "urls": ["https://www.docker.com/"]
      },
-          {
-        "name": "gherkin",
-        "keywords": ["gherkin"],
-        "urls": ["https://cucumber.io/docs/gherkin/"]
+               {
+        "name": "Teoria",
+        "keywords": ["Teoria", "Moodle"],
+        "urls": ["https://moodle.upm.es/titulaciones/oficiales/login/login.php"]
      }
     ]
 }

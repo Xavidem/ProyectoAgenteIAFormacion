@@ -3,15 +3,16 @@
 
 # Except these essentials:
 !Containerfile
-!src/**
-!models/llava/ggml-model-q4_k.gguf
-!requirements.txt
-!README.md
-!models/all-MiniLM-L6-v2/**
-!metadata_master.json
-!metadata_master_1.json
 !Containerfile.api
 !Containerfile.indexer
+!Containerfile.ui
+!src/**
+!requirements.txt
+!requirements/**
+!metadata_master_1.json
+!metadata_master_1.json.example
 !official_urls.json
-!payload.json
-!payload_8001.json
+!README.md
+!LICENSE
+!models/llava/ggml-model-q4_k.gguf
+!models/all-MiniLM-L6-v2/**

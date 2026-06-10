@@ -1,0 +1,8 @@
+# Dependencias del servicio chat-api (FastAPI + SBERT + Qdrant)
+fastapi==0.115.4
+uvicorn[standard]==0.32.0
+pydantic==2.9.2
+pydantic-settings==2.6.1
+sentence-transformers==3.2.1
+qdrant-client==1.12.1
+requests==2.32.3
